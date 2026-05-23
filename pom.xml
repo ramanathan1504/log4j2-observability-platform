@@ -1,0 +1,168 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.observability</groupId>
+    <artifactId>log4j2-observability-platform</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <!-- ─────────────────────────────────────────────
+         All version pins live HERE and nowhere else.
+         Child poms reference deps without <version>.
+         ───────────────────────────────────────────── -->
+    <properties>
+        <!-- Java -->
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Dependency versions -->
+        <spring.boot.version>3.0.5</spring.boot.version>
+        <opentelemetry.version>1.25.0</opentelemetry.version>
+        <junit4.version>4.13.2</junit4.version>
+
+        <!-- Plugin versions -->
+        <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
+        <maven.enforcer.plugin.version>3.5.0</maven.enforcer.plugin.version>
+        <spotless.maven.plugin.version>2.43.0</spotless.maven.plugin.version>
+        <google.java.format.version>1.17.0</google.java.format.version>
+        <bnd.maven.plugin.version>7.0.0</bnd.maven.plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot BOM — governs all spring-boot-* + transitive deps (JUnit 5, etc.) -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- OpenTelemetry API -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-api</artifactId>
+                <version>${opentelemetry.version}</version>
+            </dependency>
+
+            <!-- JUnit 4 (legacy; prefer JUnit 5 from Spring Boot BOM for new tests) -->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit4.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- Enforce minimum toolchain and dependency convergence in all modules -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven.enforcer.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-build-rules</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.9,)</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>[17,18)</version>
+                                </requireJavaVersion>
+                                <dependencyConvergence/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Strict formatting gate: verify fails if Java sources are not formatted -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.maven.plugin.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google.java.format.version}</version>
+                        </googleJavaFormat>
+                        <removeUnusedImports/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+        <pluginManagement>
+            <plugins>
+                <!-- Compiler config inherited by every module -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin.version}</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                    </configuration>
+                </plugin>
+
+                <!-- Spring Boot plugin — modules that need it just declare it without version -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring.boot.version}</version>
+                </plugin>
+
+                <!-- OSGi bnd plugin is pre-configured for library modules that need OSGi metadata -->
+                <plugin>
+                    <groupId>biz.aQute.bnd</groupId>
+                    <artifactId>bnd-maven-plugin</artifactId>
+                    <version>${bnd.maven.plugin.version}</version>
+                    <configuration>
+                        <bnd><![CDATA[
+-failok: false
+-reproducible: true
+]]></bnd>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <modules>
+        <module>log4j2-otel-appender</module>
+        <module>log4j2-audit-appender</module>
+
+        <module>log4j2-spring-starter</module>
+        <module>quarkus-log4j2-extension</module>
+
+        <module>log-aggregator</module>   <!-- Project 1: Java / Kafka -->
+        <module>rate-limiter</module>     <!-- Project 2: Spring Boot / Redis -->
+        <module>notification</module>     <!-- Project 3: Spring Boot -->
+        <module>file-search</module>      <!-- Project 4: Quarkus -->
+        <module>metrics</module>          <!-- Project 5: Spring Boot -->
+        <module>api-gateway</module>      <!-- Project 6: Spring Cloud Gateway -->
+        <module>job-scheduler</module>    <!-- Project 7: Quarkus -->
+    </modules>
+</project>

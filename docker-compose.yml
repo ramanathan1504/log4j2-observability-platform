@@ -1,0 +1,132 @@
+
+networks:
+  obs-network:
+    driver: bridge
+
+services:
+  # ----------------------------------------------------
+  # KAFKA (Project 1 - Log Pipeline & Event Bus)
+  # Official Apache Image - KRaft mode (No Zookeeper)
+  # ----------------------------------------------------
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    networks:
+      - obs-network
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Configure listeners for both internal Docker network and external localhost (IDE)
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # ----------------------------------------------------
+  # REDIS (Project 2 Rate Limiter & Project 7 Job Locks)
+  # ----------------------------------------------------
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    networks:
+      - obs-network
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ----------------------------------------------------
+  # ELASTICSEARCH (Project 3 & 4 - Audit Appender Target)
+  # ----------------------------------------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    networks:
+      - obs-network
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  # ----------------------------------------------------
+  # KIBANA (UI for your Audit Logs)
+  # ----------------------------------------------------
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    networks:
+      - obs-network
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # ----------------------------------------------------
+  # PROMETHEUS (Project 5 - Metrics Aggregation)
+  # ----------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    networks:
+      - obs-network
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prom_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  # ----------------------------------------------------
+  # GRAFANA (The Unified Dashboard)
+  # ----------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    networks:
+      - obs-network
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  # ----------------------------------------------------
+  # OPENTELEMETRY COLLECTOR (Layer 1 - Trace Context)
+  # ----------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.98.0
+    container_name: otel-collector
+    networks:
+      - obs-network
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+    depends_on:
+      - elasticsearch
+
+volumes:
+  kafka_data:
+  redis_data:
+  es_data:
+  prom_data:
+  grafana_data:

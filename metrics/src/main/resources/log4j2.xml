@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration packages="org.apache.logging.log4j.core">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{ISO8601} [%thread] %-5p %c{1} - %msg%n [traceId=%X{traceId}]"/>
+        </Console>
+        <File name="File" fileName="logs/metrics.log">
+            <PatternLayout pattern="%d{ISO8601} [%thread] %-5p %c{1} - %msg%n [traceId=%X{traceId}]"/>
+        </File>
+    </Appenders>
+    <Loggers>
+        <Logger name="com.observability.metrics" level="DEBUG">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Root>
+    </Loggers>
+</Configuration>
+
