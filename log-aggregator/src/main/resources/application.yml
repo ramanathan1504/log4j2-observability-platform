@@ -3,7 +3,9 @@ server:
 
 spring:
   kafka:
-    bootstrap-servers: localhost:9092
+    # Use the host-mapped Kafka port from docker-compose (9094)
+    # If you changed docker-compose to expose 9092, update this accordingly.
+    bootstrap-servers: localhost:9094
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
