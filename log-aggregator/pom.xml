@@ -13,5 +13,18 @@
     <packaging>jar</packaging>
 
     <!-- properties inherited from parent pom -->
+
+    <dependencies>
+        <!-- Kafka client and Spring Kafka (versions managed by parent BOM) -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+    </dependencies>
 </project>
 
